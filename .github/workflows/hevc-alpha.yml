@@ -1,0 +1,46 @@
+name: HEVC Alpha for Safari
+
+on:
+  workflow_dispatch:
+
+jobs:
+  encode:
+    runs-on: macos-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: brew install ffmpeg
+
+      - name: Rebuild alpha and encode HEVC
+        run: |
+          mkdir -p output
+
+          ffmpeg -y \
+            -i angel1-safari-packed.mp4 \
+            -filter_complex "[0:v]split=2[color_src][mask_src];[color_src]crop=iw/2:ih:0:0,fps=30,format=rgba[color];[mask_src]crop=iw/2:ih:iw/2:0,fps=30,format=gray[mask];[color][mask]alphamerge,format=bgra[out]" \
+            -map "[out]" \
+            -an \
+            -c:v hevc_videotoolbox \
+            -allow_sw 1 \
+            -alpha_quality 0.90 \
+            -b:v 2500k \
+            -tag:v hvc1 \
+            -movflags +faststart \
+            output/angel1-ios-alpha.mov
+
+      - name: Inspect result
+        run: |
+          ffprobe -v error \
+            -show_entries stream=codec_name,codec_tag_string,width,height,pix_fmt \
+            -of default=noprint_wrappers=1 \
+            output/angel1-ios-alpha.mov
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: angel1-ios-alpha
+          path: output/angel1-ios-alpha.mov
+          if-no-files-found: error
