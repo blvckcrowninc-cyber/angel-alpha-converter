@@ -1,0 +1,38 @@
+name: HEVC Alpha V2 from clean WebM
+
+on:
+  workflow_dispatch:
+
+jobs:
+  encode-v2:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: brew install ffmpeg
+
+      - name: Encode clean WebM
+        run: |
+          mkdir -p output
+
+          ffmpeg -y \
+            -c:v libvpx-vp9 \
+            -i angel1-clean.webm \
+            -vf "fps=30,format=gbrap,premultiply=inplace=1,scale=588:882:flags=bicubic,setparams=alpha_mode=premultiplied,format=bgra" \
+            -an \
+            -c:v hevc_videotoolbox \
+            -allow_sw 1 \
+            -alpha_quality 1.0 \
+            -b:v 3500k \
+            -tag:v hvc1 \
+            -movflags +faststart \
+            output/angel1-ios-alpha-v2.mov
+
+      - name: Upload V2
+        uses: actions/upload-artifact@v4
+        with:
+          name: angel1-ios-alpha-v2
+          path: output/angel1-ios-alpha-v2.mov
+          if-no-files-found: error
