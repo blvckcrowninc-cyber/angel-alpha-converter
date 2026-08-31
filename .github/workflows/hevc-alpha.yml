@@ -1,4 +1,4 @@
-name: HEVC Alpha for Safari
+name: HEVC Alpha V2 for Safari
 
 on:
   workflow_dispatch:
@@ -8,39 +8,31 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Download repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install FFmpeg
         run: brew install ffmpeg
 
-      - name: Rebuild alpha and encode HEVC
+      - name: Encode clean WebM to HEVC Alpha
         run: |
           mkdir -p output
 
           ffmpeg -y \
-            -i angel1-safari-packed.mp4 \
-            -filter_complex "[0:v]split=2[color_src][mask_src];[color_src]crop=iw/2:ih:0:0,fps=30,format=rgba[color];[mask_src]crop=iw/2:ih:iw/2:0,fps=30,format=gray[mask];[color][mask]alphamerge,format=bgra[out]" \
-            -map "[out]" \
+            -c:v libvpx-vp9 \
+            -i angel1-clean.webm \
+            -vf "fps=30,format=gbrap,premultiply=inplace=1,scale=588:882:flags=bicubic,setparams=alpha_mode=premultiplied,format=bgra" \
             -an \
             -c:v hevc_videotoolbox \
             -allow_sw 1 \
-            -alpha_quality 0.90 \
-            -b:v 2500k \
+            -alpha_quality 1.0 \
+            -b:v 3500k \
             -tag:v hvc1 \
             -movflags +faststart \
-            output/angel1-ios-alpha.mov
-
-      - name: Inspect result
-        run: |
-          ffprobe -v error \
-            -show_entries stream=codec_name,codec_tag_string,width,height,pix_fmt \
-            -of default=noprint_wrappers=1 \
-            output/angel1-ios-alpha.mov
+            output/angel1-ios-alpha-v2.mov
 
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: angel1-ios-alpha
-          path: output/angel1-ios-alpha.mov
+          name: angel1-ios-alpha-v2
+          path: output/angel1-ios-alpha-v2.mov
           if-no-files-found: error
