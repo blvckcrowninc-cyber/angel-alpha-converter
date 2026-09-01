@@ -1,0 +1,38 @@
+name: HEVC Alpha Hero Statue from clean WebM
+
+on:
+  workflow_dispatch:
+
+jobs:
+  encode-hero-statue:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: brew install ffmpeg
+
+      - name: Encode Hero statue WebM
+        run: |
+          mkdir -p output
+
+          ffmpeg -y \
+            -c:v libvpx-vp9 \
+            -i angel.webm \
+            -vf "fps=30,format=gbrap,premultiply=inplace=1,scale=714:724:flags=bicubic,setparams=alpha_mode=premultiplied,format=bgra" \
+            -an \
+            -c:v hevc_videotoolbox \
+            -allow_sw 1 \
+            -alpha_quality 1.0 \
+            -b:v 3500k \
+            -tag:v hvc1 \
+            -movflags +faststart \
+            output/hero-statue-ios-alpha-v1.mov
+
+      - name: Upload Hero statue
+        uses: actions/upload-artifact@v4
+        with:
+          name: hero-statue-ios-alpha-v1
+          path: output/hero-statue-ios-alpha-v1.mov
+          if-no-files-found: error
